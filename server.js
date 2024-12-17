@@ -1,19 +1,20 @@
-var proxy = require('http-proxy');
-var express = require('express');
-var https = require('https');
-var url = require('url');
-var path = require('path');
+const express = require('express');
+const fs = require('fs');
+const https = require('https');
+const proxy = require('http-proxy');
+const url = require('url');
 
-var api = require('./api.js');
-var blocked = require('./static/blocked.json');
-var reBlocked = require('./static/re_blocked.json');
+const api = require('./api.js');
+const blocked = require('./static/blocked.json');
+const reBlocked = require('./static/re_blocked.json');
 
-var port = process.env.PORT || 80;
-var subdomainsAsPath = false;
-var serveHomepage = true;
-var serveHomepageOnAllSubdomains = false;
+const DOMAIN = process.env.DOMAIN || "localhost";
+const PORT = process.env.PORT || 80;
+const HTTPS_PORT = process.env.HTTPS_PORT || 443;
+const SECRET_KEY = process.env.SECRET_KEY;
+const SUBDOMAIN_AS_PATH = true;
 
-var httpsProxy = proxy.createProxyServer({
+const httpsProxy = proxy.createProxyServer({
   agent: new https.Agent({
     checkServerIdentity: function (host, cert) {
       return undefined;
@@ -22,39 +23,39 @@ var httpsProxy = proxy.createProxyServer({
   changeOrigin: true
 });
 
-var httpProxy = proxy.createProxyServer({
+const httpProxy = proxy.createProxyServer({
   changeOrigin: true
 });
 
-function stripSub (link) {
-  var original = url.parse(link);
-  var sub = '';
-  var path = original.path;
-  if (subdomainsAsPath) {
-    var split = path.split('/');
-    sub = split[1] && split[1] + '.';
+function stripSub(link) {
+  const original = url.parse(link);
+  let sub = '';
+  let path = original.path;
+  if (SUBDOMAIN_AS_PATH) {
+    const split = path.split('/');
+    sub = split[1] ? split[1] + '.' : '';
     split.splice(1, 1);
     path = split.join('/');
   }
   return [path || '/', sub];
 }
 
-function getSubdomain (req, rewrite) {
-  var sub;
-  if (subdomainsAsPath) {
-    var res = stripSub(req.url);
+function getSubdomain(req, rewrite) {
+  let sub;
+  if (SUBDOMAIN_AS_PATH) {
+    const res = stripSub(req.url);
     if (rewrite) {
       req.url = res[0];
     }
     sub = res[1];
   } else {
-    var domain = req.headers.host;
-    sub = domain.slice(0, domain.lastIndexOf('.', domain.lastIndexOf('.') - 1) + 1);
+    const hostDomain = req.headers.host;
+    sub = hostDomain.slice(0, hostDomain.lastIndexOf('.', hostDomain.lastIndexOf('.') - 1) + 1);
   }
   return sub;
 }
 
-function onProxyError (err, req, res) {
+function onProxyError(err, req, res) {
   console.error(err);
 
   res.writeHead(500, {
@@ -64,8 +65,17 @@ function onProxyError (err, req, res) {
   res.end('Proxying failed.');
 }
 
-function onProxyReq (proxyReq, req, res, options) {
-  proxyReq.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36');
+function onProxyReq(proxyReq, req, res, options) {
+  proxyReq.setHeader('User-Agent', 'RobloxStudio/Darwin RobloxApp/0.654.1.6540477 (GlobalDist; RobloxDirectDownload)');
+  proxyReq.setHeader('Roblox-Game-Id', '00000000-0000-0000-0000-000000000000')
+  proxyReq.setHeader('Roblox-Place-Id', '0')
+  proxyReq.setHeader('Roblox-Universe-Id', '0')
+  proxyReq.setHeader('PlayerCount', '1')
+  proxyReq.setHeader('Requester', 'Client')
+  const cookie = proxyReq.getHeader('Cookie')
+  if (cookie) {
+    proxyReq.setHeader('Cookie', `.ROBLOSECURITY=_|WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-as-you-and-to-steal-your-ROBUX-and-items.|${cookie}`);
+  }
   proxyReq.removeHeader('roblox-id');
 }
 
@@ -74,47 +84,42 @@ httpsProxy.on('proxyReq', onProxyReq);
 httpProxy.on('error', onProxyError);
 httpProxy.on('proxyReq', onProxyReq);
 
-var app = express();
+const app = express();
 
 app.use('/proxy', express.static('./static'));
 app.use('/proxy', api);
 
-app.use(function (req, res, next) {
-  if (serveHomepage && stripSub(req.url)[0] === '/') {
-    if (serveHomepageOnAllSubdomains || !getSubdomain(req)) {
-      res.sendFile(path.join(__dirname, '/static/home.html'));
-      return;
-    }
+// Middleware to check the secret key
+app.use((req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      if (token === SECRET_KEY) {
+          return next();
+      }
   }
-  next();
+  res.status(401).send('🦑');
 });
 
 app.use(function (req, res, next) {
-  for (var i = 0; i < blocked.length; i++) {
-    if (req.url === blocked[i]) {
-      res.end('URL blocked.');
-      return;
-    }
-  }
-  for (i = 0; i < reBlocked.length; i++) {
-    if (req.url.match(reBlocked[i])) {
-      res.end('URL blocked.');
-      return;
-    }
+  if (blocked.includes(req.url) || reBlocked.some(pattern => req.url.match(pattern))) {
+    return res.end('URL blocked.');
   }
   next();
 });
 
 app.use(function (req, res, next) {
   console.log('PROXY REQUEST; HOST: ' + req.headers.host + '; URL: ' + req.url + '; OPT: ' + req.body + '; COOKIE: ' + req.headers.cookie + ';');
-  var subdomain = getSubdomain(req, true);
-  var proto = subdomain === 'wiki.' ? 'http' : 'https';
-  var options = {
-    target: proto + '://' + (subdomain || 'www.') + 'roblox.com'
-  };
+  const subdomain = getSubdomain(req, true);
+  const proto = subdomain === 'wiki.' ? 'http' : 'https';
+  const target = `${proto}://${subdomain || 'www.'}roblox.com`;
+
+  console.log(`Proxying to: ${target}`);
+  const options = { target };
+
   if (proto === 'https') {
     httpsProxy.web(req, res, options);
-  } else if (proto === 'http') {
+  } else {
     httpProxy.web(req, res, options);
   }
 });
@@ -129,6 +134,17 @@ app.use(function (err, req, res, next) {
   res.end('Proxy handler failed.');
 });
 
-app.listen(port, function () {
-  console.log('Listening on port ' + port);
+// HTTP Server
+app.listen(PORT, function () {
+  console.log(`Listening on ${DOMAIN}:${PORT}`);
+});
+
+// HTTPS Server
+const credentials = {
+  key: fs.readFileSync(`/etc/letsencrypt/live/${DOMAIN}/privkey.pem`, 'utf8'),
+  cert: fs.readFileSync(`/etc/letsencrypt/live/${DOMAIN}/fullchain.pem`, 'utf8')
+};
+
+https.createServer(credentials, app).listen(HTTPS_PORT, () => {
+  console.log(`Secure Express proxy running at https://${DOMAIN}:${HTTPS_PORT}`);
 });
