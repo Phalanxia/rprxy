@@ -1,4 +1,4 @@
-# rprxy
+# Lunya's rprxy Fork
 
 Because Roblox does not allow HttpService requests to roblox.com an external proxy is needed for access to site APIs.
 This will proxy all requests to Roblox via `server.js` except when the path is `/proxy` and a static file exists.
@@ -23,22 +23,22 @@ If you are not able to add subdomains for any reason (usually if you just don't 
 When this is enabled you can request a specific subdomain by using it first in the path (see the examples below).
 
 ## Examples
-In every example the main domain is `rprxy.xyz`.
+In every example the main domain is `example.com`.
 
-To search the catalog (search subdomain):  
-[https://search.rprxy.xyz/catalog/json](#)
+To search the catalog (search subdomain):
+[https://search.example.com/catalog/json](#)
 
-If you have `subdomainsAsPath` enabled:  
-[https://rprxy.xyz/search/catalog/json](#)
+If you have `subdomainsAsPath` enabled:
+[https://example.com/search/catalog/json](#)
 
-Get recommended username (no subdomain):  
-[https://rprxy.xyz/UserCheck/GetRecommendedUsername?usernameToTry=Froast]()
+Get recommended username (no subdomain):
+[https://example.com/UserCheck/GetRecommendedUsername?usernameToTry=Lunya]()
 
-If you have `subdomainsAsPath` enabled:  
-[https://rprxy.xyz/www/UserCheck/GetRecommendedUsername?usernameToTry=Froast]()
+If you have `subdomainsAsPath` enabled:
+[https://example.com/www/UserCheck/GetRecommendedUsername?usernameToTry=Lunya]()
 
-Having no subdomain is the same as having a www subdomain, below is exactly the same:  
-[https://www.rprxy.xyz/UserCheck/GetRecommendedUsername?usernameToTry=Froast]()
+Having no subdomain is the same as having a www subdomain, below is exactly the same:
+[https://www.example.com/UserCheck/GetRecommendedUsername?usernameToTry=Lunya]()
 
-If you have `subdomainsAsPath` enabled it doesn't matter what the actual subdomain is:  
-[https://www.rprxy.xyz/www/UserCheck/GetRecommendedUsername?usernameToTry=Froast]()
+If you have `subdomainsAsPath` enabled it doesn't matter what the actual subdomain is:
+[https://www.example.com/www/UserCheck/GetRecommendedUsername?usernameToTry=Lunya]()
