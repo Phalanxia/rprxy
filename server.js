@@ -10,7 +10,7 @@ const reBlocked = require('./static/re_blocked.json');
 const allowedSubdomains = require('./static/allowed_subdomains.json');
 
 const DOMAIN = process.env.DOMAIN || "localhost";
-const PORT = process.env.PORT || 80;
+const HTTP_PORT = process.env.HTTP_PORT || 80;
 const HTTPS_PORT = process.env.HTTPS_PORT || 443;
 const SECRET_KEY = process.env.SECRET_KEY;
 const SUBDOMAIN_AS_PATH = true;
@@ -105,9 +105,10 @@ app.use(function (req, res, next) {
 });
 
 app.use(function (req, res, next) {
-  const subdomain = getSubdomain(req, false);
+  let subdomain = getSubdomain(req, false);
+  subdomain = subdomain.replace(/\.$/, '');
   if (!allowedSubdomains.includes(subdomain)) {
-    return res.end('Subdomain not allowed.');
+    return res.end(`Subdomain not allowed`);
   }
   next();
 });
@@ -140,8 +141,8 @@ app.use(function (err, req, res, next) {
 });
 
 // HTTP Server
-app.listen(PORT, function () {
-  console.log(`Listening on ${DOMAIN}:${PORT}`);
+app.listen(HTTP_PORT, function () {
+  console.log(`Listening on ${DOMAIN}:${HTTP_PORT}`);
 });
 
 // HTTPS Server
