@@ -14,6 +14,11 @@ const HTTP_PORT = process.env.HTTP_PORT || 80;
 const HTTPS_PORT = process.env.HTTPS_PORT || 443;
 const SECRET_KEY = process.env.SECRET_KEY;
 const SUBDOMAIN_AS_PATH = true;
+const HOST_HTTPS_SERVER = true;
+
+const RESPONSE_INVALID_AUTHENTICATION = '🦑';
+const RESPONSE_INVALID_URL = 'URL blocked.';
+const RESPONSE_INVALID_SUBDOMAIN = 'Subdomain not allowed.';
 
 const httpsProxy = proxy.createProxyServer({
   agent: new https.Agent({
@@ -93,12 +98,12 @@ app.use((req, res, next) => {
           return next();
       }
   }
-  res.status(401).send('🦑');
+  res.status(401).send(RESPONSE_INVALID_AUTHENTICATION);
 });
 
 app.use(function (req, res, next) {
   if (blocked.includes(req.url) || reBlocked.some(pattern => req.url.match(pattern))) {
-    return res.end('URL blocked.');
+    return res.end(RESPONSE_INVALID_URL);
   }
   next();
 });
@@ -107,7 +112,7 @@ app.use(function (req, res, next) {
   let subdomain = getSubdomain(req, false);
   subdomain = subdomain.replace(/\.$/, '');
   if (!allowedSubdomains.includes(subdomain)) {
-    return res.end(`Subdomain not allowed`);
+    return res.end(RESPONSE_INVALID_SUBDOMAIN);
   }
   next();
 });
@@ -145,11 +150,13 @@ app.listen(HTTP_PORT, function () {
 });
 
 // HTTPS Server
-const credentials = {
-  key: fs.readFileSync(`/etc/letsencrypt/live/${DOMAIN}/privkey.pem`, 'utf8'),
-  cert: fs.readFileSync(`/etc/letsencrypt/live/${DOMAIN}/fullchain.pem`, 'utf8')
-};
+if (HOST_HTTPS_SERVER) {
+  const credentials = {
+    key: fs.readFileSync(`/etc/letsencrypt/live/${DOMAIN}/privkey.pem`, 'utf8'),
+    cert: fs.readFileSync(`/etc/letsencrypt/live/${DOMAIN}/fullchain.pem`, 'utf8')
+  };
 
-https.createServer(credentials, app).listen(HTTPS_PORT, () => {
-  console.log(`Secure Express proxy running at https://${DOMAIN}:${HTTPS_PORT}`);
-});
+  https.createServer(credentials, app).listen(HTTPS_PORT, () => {
+    console.log(`Secure Express proxy running at https://${DOMAIN}:${HTTPS_PORT}`);
+  });
+}
