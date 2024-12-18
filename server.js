@@ -48,10 +48,13 @@ function getSubdomain(req, rewrite) {
     if (rewrite) {
       req.url = res[0];
     }
-    sub = res[1];
+    sub = res[1].replace(/\.$/, '');
   } else {
     const hostDomain = req.headers.host;
-    sub = hostDomain.slice(0, hostDomain.lastIndexOf('.', hostDomain.lastIndexOf('.') - 1) + 1);
+    sub = hostDomain.slice(0, hostDomain.lastIndexOf('.', hostDomain.lastIndexOf('.') - 1) + 1).replace(/\.$/, '');
+  }
+  if (!allowedSubdomains.includes(sub)) {
+    sub = 'www';
   }
   return sub;
 }
@@ -118,7 +121,7 @@ app.use(function (req, res, next) {
 
   const subdomain = getSubdomain(req, true);
   const proto = req.protocol;
-  const target = `${proto}://${subdomain || 'www.'}roblox.com`;
+  const target = `${proto}://${subdomain}.roblox.com`;
 
   console.log(`Proxying to: ${target}`);
   const options = { target };
