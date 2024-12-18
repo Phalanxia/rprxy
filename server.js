@@ -66,12 +66,7 @@ function onProxyError(err, req, res) {
 }
 
 function onProxyReq(proxyReq, req, res, options) {
-  proxyReq.setHeader('User-Agent', 'RobloxStudio/Darwin RobloxApp/0.654.1.6540477 (GlobalDist; RobloxDirectDownload)');
-  proxyReq.setHeader('Roblox-Game-Id', '00000000-0000-0000-0000-000000000000')
-  proxyReq.setHeader('Roblox-Place-Id', '0')
-  proxyReq.setHeader('Roblox-Universe-Id', '0')
-  proxyReq.setHeader('PlayerCount', '1')
-  proxyReq.setHeader('Requester', 'Client')
+  proxyReq.setHeader('User-Agent', 'Roblox/Darwin RobloxApp/0.0.0.0 (GlobalDist; RobloxDirectDownload)');
   const cookie = proxyReq.getHeader('Cookie')
   if (cookie) {
     proxyReq.setHeader('Cookie', `.ROBLOSECURITY=_|WARNING:-DO-NOT-SHARE-THIS.--Sharing-this-will-allow-someone-to-log-in-as-you-and-to-steal-your-ROBUX-and-items.|${cookie}`);
