@@ -82,7 +82,6 @@ httpProxy.on('proxyReq', onProxyReq);
 
 const app = express();
 
-app.use('/proxy', express.static('./static'));
 app.use('/proxy', api);
 
 // Middleware to check the secret key
