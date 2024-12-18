@@ -7,6 +7,7 @@ const url = require('url');
 const api = require('./api.js');
 const blocked = require('./static/blocked.json');
 const reBlocked = require('./static/re_blocked.json');
+const allowedSubdomains = require('./static/allowed_subdomains.json');
 
 const DOMAIN = process.env.DOMAIN || "localhost";
 const PORT = process.env.PORT || 80;
@@ -104,9 +105,18 @@ app.use(function (req, res, next) {
 });
 
 app.use(function (req, res, next) {
-  console.log('PROXY REQUEST; HOST: ' + req.headers.host + '; URL: ' + req.url + '; OPT: ' + req.body + '; COOKIE: ' + req.headers.cookie + ';');
+  const subdomain = getSubdomain(req, false);
+  if (!allowedSubdomains.includes(subdomain)) {
+    return res.end('Subdomain not allowed.');
+  }
+  next();
+});
+
+app.use(function (req, res, next) {
+  console.log(`PROXY REQUEST; HOST: ${req.headers.host}; URL: ${req.url};`);
+
   const subdomain = getSubdomain(req, true);
-  const proto = subdomain === 'wiki.' ? 'http' : 'https';
+  const proto = req.protocol;
   const target = `${proto}://${subdomain || 'www.'}roblox.com`;
 
   console.log(`Proxying to: ${target}`);
